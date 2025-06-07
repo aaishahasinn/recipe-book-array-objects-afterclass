@@ -40,6 +40,10 @@
       background-color: #eae4de;
       padding: 20px;
       box-shadow: 2px 0 6px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
     }
 
     .sidebar h2 {
@@ -48,7 +52,7 @@
     }
 
     input, textarea, select, button {
-      width: 366px;
+      width: 90%;
       padding: 20px;
       margin: 10px 0;
       border-radius: 8px;
@@ -59,10 +63,10 @@
       font-family: 'Courier New', Courier, monospace;
       font-weight: bold;
     }
-    button{
+    select{
         width: 100%;
     }
-    select{
+    button{
         width: 100%;
     }
 
@@ -99,14 +103,17 @@
     }
 
     .recipe-card {
-      background: #fffefc;
-      border-left: 6px solid #9fb6a1;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-      border: 1px solid #ddd6cf;
-      position: relative;
-    }
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #fffefc;
+  border-left: 6px solid #9fb6a1;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  border: 1px solid #ddd6cf;
+  position: relative;
+}
 
     .recipe-card h3 {
       margin: 0 0 10px;
@@ -124,22 +131,35 @@
       font-size: 0.95rem;
     }
 
-    .delete-btn {
-  background-color: #c75c5c;
-  border: none;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  margin-top: 10px;
+    .delete-btn, .edit-btn {
+      background-color: #c49d87;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      margin-right: 8px;
+    }
+
+    .delete-btn:hover, .edit-btn:hover {
+      background-color: #a3897a;
+    }
+    .edit-btn{
+        background-color: #c4c2b3;
+    }
+    .edit-btn:hover{
+        background-color: #999171;
+    }
+    .card-buttons {
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
 }
-
-.delete-btn:hover {
-  background-color: #a54242;
-}
-
-
     ::placeholder {
       color: #a3988e;
     }
@@ -159,127 +179,142 @@
 </head>
 <body>
 
-  <header>
-    <h1>My Recipe NoteBook</h1>
-  </header>
+<header>
+  <h1>My Recipe NoteBook</h1>
+</header>
 
-  <main>
-    <div class="sidebar">
-      <h2>Add New Recipe</h2>
-      <input type="text" id="name" placeholder="Recipe name">
-      <select id="category">
-        <option value="">Select Category</option>
-        <option value="Breakfast Stuff">Breakfast Stuff</option>
-        <option value="Snacks">Snacks</option>
-        <option value="Beverages">Beverages</option>
-        <option value="Desserts">Desserts</option>
-        <option value="Midnight Snacks">Midnight Snacks</option>
-        <option value="Lunch">Lunch</option>
-        <option value="Dinner">Dinner</option>
-      </select>
-      <input type="text" id="ingredients" placeholder="Ingredients (comma-separated)" required>
-      <textarea id="instructions" placeholder="Instructions" rows="4"></textarea>
-      <button onclick="addRecipe()">Add Recipe</button>
+<main>
+  <div class="sidebar">
+    <h2>Add / Edit Recipe</h2>
+    <input type="text" id="name" placeholder="Recipe name">
+    <select id="category">
+      <option value="">Select Category</option>
+      <option value="Breakfast Stuff">Breakfast Stuff</option>
+      <option value="Snacks">Snacks</option>
+      <option value="Beverages">Beverages</option>
+      <option value="Desserts">Desserts</option>
+      <option value="Midnight Snacks">Midnight Snacks</option>
+      <option value="Lunch">Lunch</option>
+      <option value="Dinner">Dinner</option>
+    </select>
+    <input type="text" id="ingredients" placeholder="Ingredients (comma-separated)">
+    <textarea id="instructions" placeholder="Instructions (each step on a new line)" rows="4"></textarea>
+    <button onclick="addRecipe()">Save Recipe</button>
+  </div>
+
+  <div class="content">
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Search recipe by name...">
     </div>
+    <div class="recipe-list" id="recipeList"></div>
+  </div>
+</main>
 
-    <div class="content">
-      <div class="search-box">
-        <input type="text" id="search" placeholder="Search recipe by name...">
-      </div>
-      <div class="recipe-list" id="recipeList"></div>
-    </div>
-  </main>
+<script>
+  let recipes = [];
+  let editingRecipeId = null;
 
-  <script>
-    let recipes = [];
+  function addRecipe() {
+    const name = document.getElementById('name').value.trim();
+    const category = document.getElementById('category').value;
+    const ingredients = document.getElementById('ingredients').value.trim().split(',').map(i => i.trim());
+    const instructionsRaw = document.getElementById('instructions').value.trim();
+    const instructions = instructionsRaw.split(/\n+/).map(step => step.trim()).filter(step => step.length > 0);
 
-    function addRecipe() {
-      const name = document.getElementById('name').value.trim();
-      const category = document.getElementById('category').value;
-      const ingredients = document.getElementById('ingredients').value.trim().split(',');
-      const instructionsRaw = document.getElementById('instructions').value.trim();
-const instructions = instructionsRaw
-  .split(/\n+/)
-  .map(step => step.trim())
-  .filter(step => step.length > 0);
+    if (!name || !category || ingredients.length === 0 || instructions.length === 0) {
+      alert("Please fill out all fields.");
+      return;
+    }
 
-      if (!name || !category || ingredients.length === 0 || !instructions) {
-        alert("Please fill out all fields.");
-        return;
+    if (editingRecipeId) {
+      const index = recipes.findIndex(r => r.id === editingRecipeId);
+      if (index !== -1) {
+        recipes[index] = { id: editingRecipeId, name, category, ingredients, instructions };
       }
-
-      const recipe = {
-        id: Date.now(), // unique ID
+      editingRecipeId = null;
+    } else {
+      recipes.push({
+        id: Date.now(),
         name,
         category,
-        ingredients: ingredients.map(i => i.trim()),
+        ingredients,
         instructions
-      };
-
-      recipes.push(recipe);
-      localStorage.setItem('recipes', JSON.stringify(recipes));
-      displayRecipes(recipes);
-
-      // Clear form
-      document.getElementById('name').value = '';
-      document.getElementById('category').value = '';
-      document.getElementById('ingredients').value = '';
-      document.getElementById('instructions').value = '';
-    }
-
-    function deleteRecipe(id) {
-      recipes = recipes.filter(recipe => recipe.id !== id);
-      localStorage.setItem('recipes', JSON.stringify(recipes));
-      displayRecipes(recipes);
-    }
-
-    function displayRecipes(recipeArray) {
-      const list = document.getElementById('recipeList');
-      list.innerHTML = '';
-
-      if (recipeArray.length === 0) {
-        list.innerHTML = '<p>No recipes found.</p>';
-        return;
-      }
-
-      recipeArray.forEach(recipe => {
-        const card = document.createElement('div');
-        card.className = 'recipe-card';
-
-        card.innerHTML = `
-  <h3>${recipe.name}</h3>
-  <strong>Category:</strong> ${recipe.category}<br><br>
-  <strong>Ingredients:</strong>
-  <ul>
-    ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
-  </ul>
-  <p><strong>Instructions:</strong></p>
-<ol>
-  ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
-</ol>
-    <button class="delete-btn" onclick="deleteRecipe(${recipe.id})">Delete</button>
-  </div>
-`;
-        list.appendChild(card);
       });
     }
 
-    document.getElementById('search').addEventListener('input', function () {
-      const keyword = this.value.toLowerCase();
-      const filtered = recipes.filter(r =>
-        r.name.toLowerCase().includes(keyword)
-      );
-      displayRecipes(filtered);
-    });
+    localStorage.setItem('recipes', JSON.stringify(recipes));
+    displayRecipes(recipes);
+    clearForm();
+  }
 
-    window.onload = function () {
-      const saved = localStorage.getItem('recipes');
-      if (saved) {
-        recipes = JSON.parse(saved);
-        displayRecipes(recipes);
-      }
-    };
-  </script>
+  function editRecipe(id) {
+    const recipe = recipes.find(r => r.id === id);
+    if (recipe) {
+      document.getElementById('name').value = recipe.name;
+      document.getElementById('category').value = recipe.category;
+      document.getElementById('ingredients').value = recipe.ingredients.join(', ');
+      document.getElementById('instructions').value = recipe.instructions.join('\n');
+      editingRecipeId = id;
+    }
+  }
+
+  function deleteRecipe(id) {
+    recipes = recipes.filter(recipe => recipe.id !== id);
+    localStorage.setItem('recipes', JSON.stringify(recipes));
+    displayRecipes(recipes);
+  }
+
+  function displayRecipes(recipeArray) {
+    const list = document.getElementById('recipeList');
+    list.innerHTML = '';
+
+    if (recipeArray.length === 0) {
+      list.innerHTML = '<p>No recipes found.</p>';
+      return;
+    }
+
+    recipeArray.forEach(recipe => {
+      const card = document.createElement('div');
+      card.className = 'recipe-card';
+      card.innerHTML = `
+        <h3>${recipe.name}</h3>
+        <strong>Category:</strong> ${recipe.category}<br><br>
+        <strong>Ingredients:</strong>
+        <ul>${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}</ul>
+        <p><strong>Instructions:</strong></p>
+        <ol>${recipe.instructions.map(step => `<li>${step}</li>`).join('')}</ol>
+        <main>
+            <div class="card-buttons">
+        <button class="edit-btn" onclick="editRecipe(${recipe.id})">Edit</button>
+        <button class="delete-btn" onclick="deleteRecipe(${recipe.id})">Delete</button>
+            </div>
+        </main>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function clearForm() {
+    document.getElementById('name').value = '';
+    document.getElementById('category').value = '';
+    document.getElementById('ingredients').value = '';
+    document.getElementById('instructions').value = '';
+  }
+
+  document.getElementById('search').addEventListener('input', function () {
+    const keyword = this.value.toLowerCase();
+    const filtered = recipes.filter(r => r.name.toLowerCase().includes(keyword));
+    displayRecipes(filtered);
+  });
+
+  window.onload = function () {
+    const saved = localStorage.getItem('recipes');
+    if (saved) {
+      recipes = JSON.parse(saved);
+      displayRecipes(recipes);
+    }
+  };
+</script>
 
 </body>
 </html>
